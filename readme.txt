@@ -2,7 +2,7 @@
 
 使用方法
 
-dither test.bmp palette.dat
+dither test.bmp palette.pal
 
 第一个参数 test.bmp 是要处理的图片
 第二个参数是调色板数据文件名

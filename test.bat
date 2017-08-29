@@ -1,2 +1,2 @@
-dither lena.bmp mono.dat
-dither test.bmp 8colors.dat
+dither lena.bmp mono.pal
+dither test.bmp color-base8.pal

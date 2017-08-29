@@ -163,7 +163,7 @@ static int find_closest_palette_color(BYTE *palette, int palsize, int r, int g, 
 int main(int argc, char *argv[])
 {
     char  bmpfile[MAX_PATH] = "test.bmp";
-    char  palfile[MAX_PATH] = "palette.dat";
+    char  palfile[MAX_PATH] = "palette.pal";
     char  outfile[MAX_PATH] = "dither-";
     BYTE  palette[256*3]    = { 0, 0, 0, 255, 255, 255 };
     int   palsize =  2;
