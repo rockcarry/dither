@@ -164,6 +164,7 @@ int main(int argc, char *argv[])
 {
     char  bmpfile[MAX_PATH] = "test.bmp";
     char  palfile[MAX_PATH] = "palette.dat";
+    char  outfile[MAX_PATH] = "dither-";
     BYTE  palette[256*3]    = { 0, 0, 0, 255, 255, 255 };
     int   palsize =  2;
     BMP   bmp     = {0};
@@ -178,6 +179,7 @@ int main(int argc, char *argv[])
     if (argc >= 2) {
         strcpy(bmpfile, argv[1]);
     }
+    strcat(outfile, bmpfile);
 
     // load bmp file
     ret = bmp_load(&bmp, bmpfile);
@@ -255,7 +257,7 @@ int main(int argc, char *argv[])
     }
 
     // save dither bmp
-    ret = bmp_save(&bmp, "dither.bmp");
+    ret = bmp_save(&bmp, outfile);
     if (ret < 0) {
         printf("failed to save dither bmp !\n");
     } else {
