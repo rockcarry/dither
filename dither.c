@@ -126,7 +126,7 @@ static void bmp_setpixel(BMP *pb, int x, int y, int r, int g, int b)
     if (x >= pb->width || y >= pb->height) return;
     r = r < 0 ? 0 : r < 255 ? r : 255;
     g = g < 0 ? 0 : g < 255 ? g : 255;
-    g = b < 0 ? 0 : b < 255 ? b : 255;
+    b = b < 0 ? 0 : b < 255 ? b : 255;
     pbyte[x * 3 + 0 + y * pb->stride] = r;
     pbyte[x * 3 + 1 + y * pb->stride] = g;
     pbyte[x * 3 + 2 + y * pb->stride] = b;
@@ -135,6 +135,7 @@ static void bmp_setpixel(BMP *pb, int x, int y, int r, int g, int b)
 static void bmp_getpixel(BMP *pb, int x, int y, int *r, int *g, int *b)
 {
     BYTE *pbyte = pb->pdata;
+    if (x >= pb->width || y >= pb->height) return;
     *r = pbyte[x * 3 + 0 + y * pb->stride];
     *g = pbyte[x * 3 + 1 + y * pb->stride];
     *b = pbyte[x * 3 + 2 + y * pb->stride];
