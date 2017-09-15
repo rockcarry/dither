@@ -1,26 +1,31 @@
-#include <windows.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
+
+// 类型定义
+typedef unsigned char  uint8_t;
+typedef unsigned short uint16_t;
+typedef unsigned int   uint32_t;
 
 // 内部类型定义
 #pragma pack(1)
-typedef struct { 
-    WORD   bfType;
-    DWORD  bfSize;
-    WORD   bfReserved1;
-    WORD   bfReserved2;
-    DWORD  bfOffBits;
-    DWORD  biSize;
-    DWORD  biWidth;
-    DWORD  biHeight;
-    WORD   biPlanes;
-    WORD   biBitCount;
-    DWORD  biCompression;
-    DWORD  biSizeImage;
-    DWORD  biXPelsPerMeter;
-    DWORD  biYPelsPerMeter;
-    DWORD  biClrUsed;
-    DWORD  biClrImportant;
+typedef struct {
+    uint16_t  bfType;
+    uint32_t  bfSize;
+    uint16_t  bfReserved1;
+    uint16_t  bfReserved2;
+    uint32_t  bfOffBits;
+    uint32_t  biSize;
+    uint32_t  biWidth;
+    uint32_t  biHeight;
+    uint16_t  biPlanes;
+    uint16_t  biBitCount;
+    uint32_t  biCompression;
+    uint32_t  biSizeImage;
+    uint32_t  biXPelsPerMeter;
+    uint32_t  biYPelsPerMeter;
+    uint32_t  biClrUsed;
+    uint32_t  biClrImportant;
 } BMPFILEHEADER;
 #pragma pack()
 
@@ -44,7 +49,7 @@ static int bmp_load(BMP *pb, char *file)
 {
     BMPFILEHEADER header = {0};
     FILE         *fp     = NULL;
-    BYTE         *pdata  = NULL;
+    uint8_t      *pdata  = NULL;
     int           i;
 
     fp = fopen(file, "rb");
@@ -56,7 +61,7 @@ static int bmp_load(BMP *pb, char *file)
     pb->stride = ALIGN(header.biWidth * 3, 4);
     pb->pdata  = malloc(pb->stride * pb->height);
     if (pb->pdata) {
-        pdata  = (BYTE*)pb->pdata + pb->stride * pb->height;
+        pdata  = (uint8_t*)pb->pdata + pb->stride * pb->height;
         for (i=0; i<pb->height; i++) {
             pdata -= pb->stride;
             fread(pdata, pb->stride, 1, fp);
@@ -82,7 +87,7 @@ static int bmp_save(BMP *pb, char *file)
 {
     BMPFILEHEADER header = {0};
     FILE         *fp     = NULL;
-    BYTE         *pdata;
+    uint8_t      *pdata;
     int           i;
 
     header.bfType     = ('B' << 0) | ('M' << 8);
@@ -98,7 +103,7 @@ static int bmp_save(BMP *pb, char *file)
     fp = fopen(file, "wb");
     if (fp) {
         fwrite(&header, sizeof(header), 1, fp);
-        pdata = (BYTE*)pb->pdata + pb->stride * pb->height;
+        pdata = (uint8_t*)pb->pdata + pb->stride * pb->height;
         for (i=0; i<pb->height; i++) {
             pdata -= pb->stride;
             fwrite(pdata, pb->stride, 1, fp);
@@ -122,7 +127,7 @@ static void bmp_free(BMP *pb)
 
 static void bmp_setpixel(BMP *pb, int x, int y, int r, int g, int b)
 {
-    BYTE *pbyte = pb->pdata;
+    uint8_t *pbyte = pb->pdata;
     if (x >= pb->width || y >= pb->height) return;
     r = r < 0 ? 0 : r < 255 ? r : 255;
     g = g < 0 ? 0 : g < 255 ? g : 255;
@@ -134,14 +139,14 @@ static void bmp_setpixel(BMP *pb, int x, int y, int r, int g, int b)
 
 static void bmp_getpixel(BMP *pb, int x, int y, int *r, int *g, int *b)
 {
-    BYTE *pbyte = pb->pdata;
+    uint8_t *pbyte = pb->pdata;
     if (x >= pb->width || y >= pb->height) return;
     *r = pbyte[x * 3 + 0 + y * pb->stride];
     *g = pbyte[x * 3 + 1 + y * pb->stride];
     *b = pbyte[x * 3 + 2 + y * pb->stride];
 }
 
-static int find_closest_palette_color(BYTE *palette, int palsize, int r, int g, int b)
+static int find_closest_palette_color(uint8_t *palette, int palsize, int r, int g, int b)
 {
     int mindist = 0x7fffffff;
     int closest = 0;
@@ -159,18 +164,113 @@ static int find_closest_palette_color(BYTE *palette, int palsize, int r, int g, 
 
     return closest;
 }
+//++ octree
+typedef struct tagNODE {
+    int r;
+    int g;
+    int b;
+    int c;
+    struct tagNODE *child[8];
+} NODE;
+
+static NODE* octree_create(uint8_t *pal, int size)
+{
+    NODE *root = calloc(1, sizeof(NODE));
+    NODE *node = NULL;
+    int   r, g, b, i, j;
+    int   idx;
+
+    for (i=0; i<size; i++) {
+        r = pal[i*3+0];
+        g = pal[i*3+1];
+        b = pal[i*3+2];
+
+        node = root; // from root
+        for (j=1; j<=8; j++) {
+            idx = ((r >> (6 - j)) & (1 << 2))
+                | ((g >> (7 - j)) & (1 << 1))
+                | ((b >> (8 - j)) & (1 << 0));
+            if (node->child[idx] == NULL) {
+                node->child[idx]    = calloc(1, sizeof(NODE));
+                node->child[idx]->c = -1;  // i != -1 means it is a leaf
+            }
+            node = node->child[idx];
+        }
+
+        node->r = r;
+        node->g = g;
+        node->b = b;
+        node->c = i;
+    }
+
+    return root;
+}
+
+static void octree_destroy(NODE *root)
+{
+    int  i;
+    for (i=0; i<8; i++) {
+        if (root->child[i]) {
+            octree_destroy(root->child[i]);
+        }
+    }
+    free(root);
+}
+
+static void octree_traverse(NODE *node, int data[5])
+{
+    int i;
+
+    if (node->c != -1) {
+        int curdist = (data[0] - node->r) * (data[0] - node->r)
+                    + (data[1] - node->g) * (data[1] - node->g)
+                    + (data[2] - node->b) * (data[2] - node->b);
+        if (data[3] > curdist) {
+            data[3] = curdist;
+            data[4] = node->c;
+        }
+        return;
+    }
+
+    for (i=0; i<8; i++) {
+        if (node->child[i]) {
+            octree_traverse(node->child[i], data);
+        }
+    }
+}
+
+static int octree_find_color(NODE *root, int r, int g, int b)
+{
+    NODE *node    = root;
+    int   idx     = 0;
+    int   data[5] = { r, g, b, 0x7fffffff, -1 };
+    int   i;
+
+    for (i=1; i<=8; i++) {
+        idx = ((r >> (6 - i)) & (1 << 2))
+            | ((g >> (7 - i)) & (1 << 1))
+            | ((b >> (8 - i)) & (1 << 0));
+        if (!node->child[idx]) break;
+        node = node->child[idx];
+    }
+
+    octree_traverse(node, data);
+    return data[4];
+}
+//-- octree
 
 int main(int argc, char *argv[])
 {
-    char  bmpfile[MAX_PATH] = "test.bmp";
-    char  palfile[MAX_PATH] = "palette.pal";
-    char  outfile[MAX_PATH] = "dither-";
-    BYTE  palette[256*3]    = { 0, 0, 0, 255, 255, 255 };
-    int   palsize =  2;
-    BMP   bmp     = {0};
-    int   ret     =  0;
-    FILE *fp      = NULL;
-    int   i, x, y;
+    char    bmpfile[MAX_PATH] = "test.bmp";
+    char    palfile[MAX_PATH] = "palette.pal";
+    char    outfile[MAX_PATH] = "dither-";
+    uint8_t palette[256*3]    = { 0, 0, 0, 255, 255, 255 };
+    int     palsize =  2;
+    BMP     bmp     = {0};
+    int     ret     =  0;
+    FILE   *fp      = NULL;
+    int     i, x, y;
+    NODE   *octree  = NULL;
 
     // handle commmand line
     if (argc >= 3) {
@@ -206,6 +306,9 @@ int main(int argc, char *argv[])
         fclose(fp);
     }
 
+    // create octree
+    octree = octree_create(palette, palsize);
+
     // do dither
     for (y=0; y<bmp.height; y++) {
         for (x=0; x<bmp.width; x++) {
@@ -215,7 +318,8 @@ int main(int argc, char *argv[])
 
             // for pixel (x, y)
             bmp_getpixel(&bmp, x, y, &oldr, &oldg, &oldb);
-            i    = find_closest_palette_color(palette, palsize, oldr, oldg, oldb);
+//          i    = find_closest_palette_color(palette, palsize, oldr, oldg, oldb);
+            i    = octree_find_color(octree, oldr, oldg, oldb);
             newr = palette[i * 3 + 0];
             newg = palette[i * 3 + 1];
             newb = palette[i * 3 + 2];
@@ -255,6 +359,9 @@ int main(int argc, char *argv[])
             bmp_setpixel(&bmp, x+1, y+1, newr, newg, newb);
         }
     }
+
+    // destroy octree
+    octree_destroy(octree);
 
     // save dither bmp
     ret = bmp_save(&bmp, outfile);
