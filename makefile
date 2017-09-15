@@ -3,15 +3,18 @@
 
 # 编译器定义
 CC      = i586-mingw32msvc-gcc
+STRIP   = i586-mingw32msvc-strip
 CCFLAGS = -Wall
 
 # 所有的目标文件
 OBJS = \
-    dither.o
+    dither.o \
+    palette.o
 
 # 所有的可执行目标
 EXES = \
     dither.exe \
+    palette.exe
 
 # 编译规则
 all : $(EXES)
@@ -21,6 +24,7 @@ all : $(EXES)
 
 %.exe : %.o
 	$(CC) $(CCFLAGS) -o $@ $<
+	$(STRIP) $@
 
 clean :
 	-rm -f *.o
