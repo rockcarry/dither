@@ -140,12 +140,16 @@ static void bmp_setpixel(BMP *pb, int x, int y, int r, int g, int b)
 static void bmp_getpixel(BMP *pb, int x, int y, int *r, int *g, int *b)
 {
     uint8_t *pbyte = pb->pdata;
-    if (x >= pb->width || y >= pb->height) return;
+    if (x >= pb->width || y >= pb->height) {
+        *r = *g = *b = 0;
+        return;
+    }
     *r = pbyte[x * 3 + 0 + y * pb->stride];
     *g = pbyte[x * 3 + 1 + y * pb->stride];
     *b = pbyte[x * 3 + 2 + y * pb->stride];
 }
 
+#if 0
 static int find_closest_palette_color(uint8_t *palette, int palsize, int r, int g, int b)
 {
     int mindist = 0x7fffffff;
@@ -164,6 +168,8 @@ static int find_closest_palette_color(uint8_t *palette, int palsize, int r, int 
 
     return closest;
 }
+#endif
+
 //++ octree
 typedef struct tagNODE {
     int r;

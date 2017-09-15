@@ -88,7 +88,10 @@ static void bmp_free(BMP *pb)
 static void bmp_getpixel(BMP *pb, int x, int y, int *r, int *g, int *b)
 {
     uint8_t *pbyte = pb->pdata;
-    if (x >= pb->width || y >= pb->height) return;
+    if (x >= pb->width || y >= pb->height) {
+        *r = *g = *b = 0;
+        return;
+    }
     *r = pbyte[x * 3 + 0 + y * pb->stride];
     *g = pbyte[x * 3 + 1 + y * pb->stride];
     *b = pbyte[x * 3 + 2 + y * pb->stride];
@@ -311,8 +314,8 @@ static void octree_getpal(OCTREE *tree, uint8_t *pal)
 
 static void build_best_match_pal(uint8_t *pal, int maxcolor, char *file)
 {
-    BMP      bmp;
-    OCTREE   tree;
+    BMP      bmp  = {};
+    OCTREE   tree = {};
     int      r, g, b;
     int      i, j;
 
@@ -337,7 +340,7 @@ static void build_best_match_pal(uint8_t *pal, int maxcolor, char *file)
 int main(int argc, char *argv[])
 {
     uint8_t pal[256*3] = {0};
-    int     size;
+    int     size       =  0;
     int     i, n;
 
     if (argc < 3) {
