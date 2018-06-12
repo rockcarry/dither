@@ -331,10 +331,6 @@ static void build_best_match_pal(uint8_t *pal, int maxcolor, char *file)
     octree_getpal(&tree, pal);
     octree_free(&tree);
     bmp_free(&bmp);
-
-    for (i=0; i<maxcolor; i++) {
-        printf("%3d %3d %3d\n", pal[i*3+0], pal[i*3+1], pal[i*3+2]);
-    }
 }
 
 int main(int argc, char *argv[])
