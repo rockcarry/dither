@@ -2,8 +2,8 @@
 # written by rockcarry
 
 # 编译器定义
-CC      = i586-mingw32msvc-gcc
-STRIP   = i586-mingw32msvc-strip
+CC      = gcc
+STRIP   = strip
 CCFLAGS = -Wall -Os
 
 # 所有的目标文件

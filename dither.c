@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <limits.h>
 
 // 类型定义
 typedef unsigned char  uint8_t;
@@ -267,16 +268,17 @@ static int octree_find_color(NODE *root, int r, int g, int b)
 
 int main(int argc, char *argv[])
 {
-    char    bmpfile[MAX_PATH] = "test.bmp";
-    char    palfile[MAX_PATH] = "palette.pal";
-    char    outfile[MAX_PATH] = "dither-";
+    char    bmpfile[PATH_MAX] = "test.bmp";
+    char    palfile[PATH_MAX] = "palette.pal";
+    char    outfile[PATH_MAX] = "dither-";
     uint8_t palette[256*3]    = { 0, 0, 0, 255, 255, 255 };
     int     palsize =  2;
     BMP     bmp     = {0};
-    int     ret     =  0;
     FILE   *fp      = NULL;
-    int     i, x, y;
     NODE   *octree  = NULL;
+    int     ret     =  0;
+    int     i       =  0;
+    int     x, y;
 
     // handle commmand line
     if (argc >= 3) {
@@ -297,21 +299,19 @@ int main(int argc, char *argv[])
     // load palette
     fp = fopen(palfile, "rb");
     if (fp) {
-        for (i=0; ; i++) {
+        while (!feof(fp) && i<256) {
             int r, g, b;
             ret = fscanf(fp, "%d %d %d", &r, &g, &b);
-            if (ret == -1) {
-                palsize = i;
-                break;
-            } else {
+            if (ret != -1) {
                 palette[i * 3 + 0] = r;
                 palette[i * 3 + 1] = g;
                 palette[i * 3 + 2] = b;
+                i++;
             }
         }
         fclose(fp);
+        palsize = i;
     }
-
     // create octree
     octree = octree_create(palette, palsize);
 
