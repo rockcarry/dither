@@ -9,12 +9,14 @@ CCFLAGS = -Wall -Os
 # 所有的目标文件
 OBJS = \
     dither.o \
-    palette.o
+    palette.o \
+    bmp24tobmp4.o
 
 # 所有的可执行目标
 EXES = \
     dither.exe \
-    palette.exe
+    palette.exe \
+    bmp24tobmp4.exe
 
 # 编译规则
 all : $(EXES)

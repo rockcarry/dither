@@ -150,7 +150,6 @@ static void bmp_getpixel(BMP *pb, int x, int y, int *r, int *g, int *b)
     *b = pbyte[x * 3 + 2 + y * pb->stride];
 }
 
-#if 0
 static int find_closest_palette_color(uint8_t *palette, int palsize, int r, int g, int b)
 {
     int mindist = 0x7fffffff;
@@ -169,7 +168,6 @@ static int find_closest_palette_color(uint8_t *palette, int palsize, int r, int 
 
     return closest;
 }
-#endif
 
 //++ octree
 typedef struct tagNODE {
@@ -276,11 +274,16 @@ int main(int argc, char *argv[])
     BMP     bmp     = {0};
     FILE   *fp      = NULL;
     NODE   *octree  = NULL;
+    int     dither  =  1;
     int     ret     =  0;
     int     i       =  0;
     int     x, y;
 
     // handle commmand line
+    if (argc >= 4) {
+        if (strcmp("nodither", argv[3]) == 0) dither = 0;
+        printf("dither: %d\n", dither);
+    }
     if (argc >= 3) {
         strcpy(palfile, argv[2]);
     }
@@ -324,45 +327,53 @@ int main(int argc, char *argv[])
 
             // for pixel (x, y)
             bmp_getpixel(&bmp, x, y, &oldr, &oldg, &oldb);
-//          i    = find_closest_palette_color(palette, palsize, oldr, oldg, oldb);
-            i    = octree_find_color(octree, oldr, oldg, oldb);
-            newr = palette[i * 3 + 0];
-            newg = palette[i * 3 + 1];
-            newb = palette[i * 3 + 2];
-            bmp_setpixel(&bmp, x, y, newr, newg, newb);
+            if (dither) {
+                i    = octree_find_color(octree, oldr, oldg, oldb);
+                newr = palette[i * 3 + 0];
+                newg = palette[i * 3 + 1];
+                newb = palette[i * 3 + 2];
+                bmp_setpixel(&bmp, x, y, newr, newg, newb);
 
-            // calculate the error
-            errr = oldr - newr;
-            errg = oldg - newg;
-            errb = oldb - newb;
+                // calculate the error
+                errr = oldr - newr;
+                errg = oldg - newg;
+                errb = oldb - newb;
 
-            // for pixel (x+1, y)
-            bmp_getpixel(&bmp, x+1, y, &newr, &newg, &newb);
-            newr += errr * 7 / 16;
-            newg += errg * 7 / 16;
-            newb += errb * 7 / 16;
-            bmp_setpixel(&bmp, x+1, y, newr, newg, newb);
+                // for pixel (x+1, y)
+                bmp_getpixel(&bmp, x+1, y, &newr, &newg, &newb);
+                newr += errr * 7 / 16;
+                newg += errg * 7 / 16;
+                newb += errb * 7 / 16;
+                bmp_setpixel(&bmp, x+1, y, newr, newg, newb);
 
-            // for pixel (x-1, y+1)
-            bmp_getpixel(&bmp, x-1, y+1, &newr, &newg, &newb);
-            newr += errr * 3 / 16;
-            newg += errg * 3 / 16;
-            newb += errb * 3 / 16;
-            bmp_setpixel(&bmp, x-1, y+1, newr, newg, newb);
+                // for pixel (x-1, y+1)
+                bmp_getpixel(&bmp, x-1, y+1, &newr, &newg, &newb);
+                newr += errr * 3 / 16;
+                newg += errg * 3 / 16;
+                newb += errb * 3 / 16;
+                bmp_setpixel(&bmp, x-1, y+1, newr, newg, newb);
 
-            // for pixel (x, y+1)
-            bmp_getpixel(&bmp, x, y+1, &newr, &newg, &newb);
-            newr += errr * 5 / 16;
-            newg += errg * 5 / 16;
-            newb += errb * 5 / 16;
-            bmp_setpixel(&bmp, x, y+1, newr, newg, newb);
+                // for pixel (x, y+1)
+                bmp_getpixel(&bmp, x, y+1, &newr, &newg, &newb);
+                newr += errr * 5 / 16;
+                newg += errg * 5 / 16;
+                newb += errb * 5 / 16;
+                bmp_setpixel(&bmp, x, y+1, newr, newg, newb);
 
-            // for pixel (x+1, y+1)
-            bmp_getpixel(&bmp, x+1, y+1, &newr, &newg, &newb);
-            newr += errr * 1 / 16;
-            newg += errg * 1 / 16;
-            newb += errb * 1 / 16;
-            bmp_setpixel(&bmp, x+1, y+1, newr, newg, newb);
+                // for pixel (x+1, y+1)
+                bmp_getpixel(&bmp, x+1, y+1, &newr, &newg, &newb);
+                newr += errr * 1 / 16;
+                newg += errg * 1 / 16;
+                newb += errb * 1 / 16;
+                bmp_setpixel(&bmp, x+1, y+1, newr, newg, newb);
+            } else {
+                if (0) {
+                    i = octree_find_color(octree, oldr, oldg, oldb);
+                } else {
+                    i = find_closest_palette_color(palette, palsize, oldr, oldg, oldb);
+                }
+                bmp_setpixel(&bmp, x, y, palette[i * 3 + 0], palette[i * 3 + 1], palette[i * 3 + 2]);
+            }
         }
     }
 
